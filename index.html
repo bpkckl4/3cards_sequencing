@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>圖咭排序遊戲(初階) - 多關卡版</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti Library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Noto+Sans+TC:wght@600;800;900&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Noto Sans TC', 'Fredoka', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* Red flashing border for incorrect sorting */
+    @keyframes flashRed {
+      0% {
+        border-color: #ef4444;
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.9), inset 0 0 10px rgba(239, 68, 68, 0.3);
+        transform: scale(1.02);
+      }
+      50% {
+        border-color: #f87171;
+        box-shadow: 0 0 5px rgba(239, 68, 68, 0.3);
+        transform: scale(1);
+      }
+      100% {
+        border-color: #ef4444;
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.9), inset 0 0 10px rgba(239, 68, 68, 0.3);
+        transform: scale(1.02);
+      }
+    }
+
+    .error-flash {
+      animation: flashRed 0.6s infinite ease-in-out;
+      background-color: #fef2f2 !important;
+    }
+
+    /* Bounce effect for victory modal thumbs up icon */
+    @keyframes bounceUp {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-18px) scale(1.15); }
+    }
+
+    .animate-bounce-thumb {
+      animation: bounceUp 1.2s infinite ease-in-out;
+    }
+
+    /* Visual effect when dragging card over a valid slot */
+    .drag-over-active {
+      border-color: #3b82f6 !important;
+      background-color: #eff6ff !important;
+      transform: scale(1.03);
+    }
+
+    /* Card hover & drag transitions */
+    .card-item {
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .card-item:hover {
+      transform: translateY(-6px) scale(1.02);
+    }
+    .card-item:active {
+      cursor: grabbing;
+      transform: scale(0.98);
+    }
+
+    /* Custom scrollbar for multi-tab horizontal bar */
+    .tab-scrollbar::-webkit-scrollbar {
+      height: 6px;
+    }
+    .tab-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-amber-100 via-sky-100 to-indigo-100 min-h-screen flex flex-col justify-between p-3 sm:p-6 text-slate-800">
+
+  <!-- Header Bar -->
+  <header class="max-w-6xl w-full mx-auto bg-white/90 backdrop-blur-md rounded-3xl p-4 sm:p-6 shadow-xl border-4 border-amber-300 flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
+    <div class="flex items-center gap-3">
+      <div class="bg-amber-400 text-white p-3 rounded-2xl shadow-md text-3xl sm:text-4xl">
+        🧩
+      </div>
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-black text-slate-800 tracking-wide">
+          圖咭排序遊戲 <span class="bg-amber-400 text-white text-xs sm:text-sm px-3 py-1 rounded-full uppercase ml-1">初階 - 多關卡版</span>
+        </h1>
+        <p class="text-xs sm:text-sm font-bold text-slate-500 mt-0.5">點擊上方關卡頁籤，按正確順序拖拉或點擊圖咭到下方排序區！</p>
+      </div>
+    </div>
+
+    <!-- Mode Toggle & Reset Presets Buttons -->
+    <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto justify-end">
+      <!-- Preset Levels Button -->
+      <button onclick="loadPresetLevels()" class="flex-1 md:flex-initial bg-sky-500 hover:bg-sky-600 active:scale-95 text-white font-extrabold px-4 py-2.5 rounded-2xl shadow-lg border-b-4 border-sky-700 transition flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+        <span>✨ 載入預設關卡</span>
+      </button>
+
+      <!-- Toggle Edit/Student Mode -->
+      <button id="modeToggleBtn" onclick="toggleEditMode()" class="flex-1 md:flex-initial bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-extrabold px-4 py-2.5 rounded-2xl shadow-lg border-b-4 border-indigo-800 transition flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+        <span id="modeToggleLabel">⚙️ 老師編輯模式</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Layout Container -->
+  <main class="max-w-6xl w-full mx-auto flex-1 flex flex-col gap-5">
+
+    <!-- Multi-Tab Navigation Bar -->
+    <section class="bg-white/80 backdrop-blur border-4 border-amber-200 rounded-3xl p-3 shadow-lg">
+      <div class="flex items-center justify-between mb-2 px-2">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-black text-amber-800 bg-amber-200 px-3 py-1 rounded-full">關卡選擇</span>
+          <span id="completionBadgeSummary" class="text-xs font-bold text-slate-500">已完成: 0 / 0</span>
+        </div>
+        <div id="editModeNotice" class="hidden text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
+          ⚙️ 編輯模式中：點擊 ✏️ 改名、🗑️ 刪除關卡，或 + 新增關卡
+        </div>
+      </div>
+
+      <!-- Tab Buttons Scrollable List -->
+      <div class="flex items-center gap-2 overflow-x-auto tab-scrollbar pb-1" id="tabsContainer">
+        <!-- Tabs dynamically injected here -->
+      </div>
+    </section>
+
+    <!-- Teacher Edit Panel (Visible only in Edit Mode) -->
+    <section id="teacherEditPanel" class="hidden bg-indigo-900/90 text-white backdrop-blur border-4 border-indigo-400 rounded-3xl p-4 sm:p-5 shadow-xl flex flex-col gap-4">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-indigo-700/60 pb-3">
+        <div>
+          <h3 class="text-base sm:text-lg font-black text-amber-300 flex items-center gap-2">
+            <span>⚙️ 正在編輯關卡：</span>
+            <span id="editingTabNameDisplay" class="underline decoration-amber-400">當前關卡</span>
+          </h3>
+          <p class="text-xs text-indigo-200 mt-0.5">您可以隨時為這個關卡重新上載 3 張圖咭（請按第 1、2、3 步順序一次選取 3 張圖片）。</p>
+        </div>
+
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <input type="file" id="tabImageUploader" accept="image/*" multiple class="hidden" onchange="handleTabFileUpload(event)">
+          <button onclick="document.getElementById('tabImageUploader').click()" class="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-black px-4 py-2.5 rounded-xl shadow border-b-4 border-emerald-700 transition text-xs sm:text-sm flex items-center justify-center gap-1.5">
+            <span>📁 為此關卡上載 3 張圖咭</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card Area (圖咭區 - 上方) -->
+    <section class="bg-white/80 backdrop-blur border-4 border-indigo-200 rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col flex-1">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg sm:text-xl font-black text-indigo-900 flex items-center gap-2">
+          <span>🖼️ 圖咭區</span>
+          <span class="text-xs font-normal text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">拖拉或點擊圖片移至下方</span>
+        </h2>
+        <span id="cardPoolCount" class="text-xs sm:text-sm font-bold text-slate-500">待排序：0 / 3</span>
+      </div>
+
+      <!-- Card Display Grid (Expands full width) -->
+      <div id="cardPool" class="w-full flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 items-center justify-items-center min-h-[220px] p-3 bg-indigo-50/50 rounded-2xl border-2 border-dashed border-indigo-200">
+        <!-- Dynamic Empty State -->
+        <div id="emptyState" class="col-span-full flex flex-col items-center justify-center py-10 text-center text-slate-400">
+          <span class="text-5xl mb-3">🖼️</span>
+          <p class="font-bold text-base sm:text-lg text-slate-600">此關卡目前沒有圖咭</p>
+          <p class="text-xs sm:text-sm mt-1">請點擊右上角「⚙️ 老師編輯模式」上載圖咭，或點擊「✨ 載入預設關卡」！</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ordering Area (排序區 - 下方) -->
+    <section class="bg-white/90 backdrop-blur border-4 border-amber-300 rounded-3xl p-4 sm:p-6 shadow-xl">
+      <!-- Ordering Bar Controls -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5">
+        <h2 class="text-lg sm:text-xl font-black text-amber-900 flex items-center gap-2">
+          <span>🎯 排序區</span>
+          <span class="text-xs font-normal text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">按順序排列三個方框</span>
+        </h2>
+
+        <!-- Action Buttons: Help & Restart -->
+        <div class="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <button onclick="helpFirstCard()" class="flex-1 sm:flex-none bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-900 font-black px-4 py-2.5 rounded-2xl shadow-md border-b-4 border-amber-600 transition flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+            <span>💡 幫我排第一張</span>
+          </button>
+
+          <button onclick="restartCurrentTab()" class="flex-1 sm:flex-none bg-rose-500 hover:bg-rose-600 active:scale-95 text-white font-black px-4 py-2.5 rounded-2xl shadow-md border-b-4 border-rose-700 transition flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+            <span>🔄 重新開始</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3 Frames Connected with Animated Arrow Dividers -->
+      <div class="grid grid-cols-1 md:grid-cols-11 gap-2 sm:gap-4 items-center">
+        <!-- Frame 1 -->
+        <div class="md:col-span-3 flex flex-col items-center">
+          <div class="w-full flex items-center justify-between mb-1 px-1">
+            <span class="text-xs font-black text-amber-700 bg-amber-200/80 px-2 py-0.5 rounded-full">第 1 步</span>
+          </div>
+          <div id="slot-0" data-slot="0" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"
+               class="order-slot w-full h-56 sm:h-64 rounded-2xl border-4 border-dashed border-amber-300 bg-amber-50/40 flex flex-col items-center justify-center relative p-2 transition-all">
+            <span class="placeholder-text text-amber-300 text-4xl font-black opacity-60">1</span>
+            <span class="placeholder-text text-xs text-amber-400 font-bold mt-1">第一個方框</span>
+          </div>
+        </div>
+
+        <!-- Arrow Divider 1 -->
+        <div class="md:col-span-1 flex items-center justify-center py-2 md:py-0">
+          <div class="bg-amber-200 text-amber-700 p-2.5 sm:p-3 rounded-full shadow-inner rotate-90 md:rotate-0 font-black text-xl md:text-2xl">
+            ➔
+          </div>
+        </div>
+
+        <!-- Frame 2 -->
+        <div class="md:col-span-3 flex flex-col items-center">
+          <div class="w-full flex items-center justify-between mb-1 px-1">
+            <span class="text-xs font-black text-amber-700 bg-amber-200/80 px-2 py-0.5 rounded-full">第 2 步</span>
+          </div>
+          <div id="slot-1" data-slot="1" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"
+               class="order-slot w-full h-56 sm:h-64 rounded-2xl border-4 border-dashed border-amber-300 bg-amber-50/40 flex flex-col items-center justify-center relative p-2 transition-all">
+            <span class="placeholder-text text-amber-300 text-4xl font-black opacity-60">2</span>
+            <span class="placeholder-text text-xs text-amber-400 font-bold mt-1">第二個方框</span>
+          </div>
+        </div>
+
+        <!-- Arrow Divider 2 -->
+        <div class="md:col-span-1 flex items-center justify-center py-2 md:py-0">
+          <div class="bg-amber-200 text-amber-700 p-2.5 sm:p-3 rounded-full shadow-inner rotate-90 md:rotate-0 font-black text-xl md:text-2xl">
+            ➔
+          </div>
+        </div>
+
+        <!-- Frame 3 -->
+        <div class="md:col-span-3 flex flex-col items-center">
+          <div class="w-full flex items-center justify-between mb-1 px-1">
+            <span class="text-xs font-black text-amber-700 bg-amber-200/80 px-2 py-0.5 rounded-full">第 3 步</span>
+          </div>
+          <div id="slot-2" data-slot="2" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)"
+               class="order-slot w-full h-56 sm:h-64 rounded-2xl border-4 border-dashed border-amber-300 bg-amber-50/40 flex flex-col items-center justify-center relative p-2 transition-all">
+            <span class="placeholder-text text-amber-300 text-4xl font-black opacity-60">3</span>
+            <span class="placeholder-text text-xs text-amber-400 font-bold mt-1">第三個方框</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Incorrect Warning Banner -->
+      <div id="errorBanner" class="hidden mt-4 p-3 bg-rose-100 border-2 border-rose-300 text-rose-700 font-bold rounded-2xl text-center text-sm sm:text-base flex items-center justify-center gap-2">
+        <span>⚠️ 順序不太對喔！排錯的圖咭正在閃爍，請按「重新開始」或「幫我排第一張」再試一次！</span>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="max-w-6xl w-full mx-auto text-center py-4 text-xs font-bold text-slate-500">
+    圖咭排序遊戲(初階) - 多關卡版 &bull; 適合小學生互動學習
+  </footer>
+
+  <!-- Success Modal Window -->
+  <div id="successModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-sm sm:max-w-md w-full shadow-2xl border-4 border-emerald-400 text-center transform scale-90 transition-all duration-300 flex flex-col items-center">
+      
+      <!-- Big Thumbs Up Icon -->
+      <div class="w-28 h-28 bg-emerald-100 rounded-full flex items-center justify-center mb-4 shadow-inner">
+        <span class="text-7xl animate-bounce-thumb">👍</span>
+      </div>
+
+      <h3 class="text-3xl font-black text-slate-800 mb-2">做得好！</h3>
+      <p id="successModalMessage" class="text-slate-600 font-bold text-base mb-6">太棒了！你已經成功將所有圖咭正確排序！</p>
+
+      <div class="flex flex-col gap-2 w-full">
+        <button id="nextLevelBtn" onclick="goToNextLevel()" class="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-black text-lg py-3 px-6 rounded-2xl shadow-lg border-b-4 border-emerald-700 transition">
+          🚀 挑戰下一個關卡
+        </button>
+        <button onclick="closeModalOnly()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-sm py-2.5 px-4 rounded-xl transition">
+          返回查看
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================
+       Global Application State
+       ========================================== */
+    let levels = [];              // Array of Level Objects
+    let activeLevelId = null;     // Current active level ID
+    let isEditMode = false;       // Teacher edit mode toggle
+    let draggedCardId = null;     // Card being dragged
+
+    /* ==========================================
+       Web Audio API Sound Effects Engine
+       ========================================== */
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playPopSound() {
+      try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(640, audioCtx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.08);
+      } catch (e) {}
+    }
+
+    function playVictorySound() {
+      try {
+        initAudio();
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.value = freq;
+          const startTime = audioCtx.currentTime + (idx * 0.12);
+          gain.gain.setValueAtTime(0, startTime);
+          gain.gain.linearRampToValueAtTime(0.3, startTime + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.35);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(startTime);
+          osc.stop(startTime + 0.35);
+        });
+      } catch (e) {}
+    }
+
+    function playErrorSound() {
+      try {
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+      } catch (e) {}
+    }
+
+    /* ==========================================
+       Preset Data & Level Management
+       ========================================== */
+
+    // SVG Generator Helper for Default Preset Levels
+    function createSVG(emoji, label, color) {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300">
+        <rect width="100%" height="100%" fill="${color}" rx="24"/>
+        <text x="50%" y="45%" dominant-baseline="central" text-anchor="middle" font-size="90">${emoji}</text>
+        <text x="50%" y="80%" dominant-baseline="central" text-anchor="middle" font-size="26" font-family="sans-serif" font-weight="bold" fill="#334155">${label}</text>
+      </svg>`;
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    }
+
+    // Load Default 3 Preset Levels
+    function loadPresetLevels() {
+      initAudio();
+
+      levels = [
+        {
+          id: 'lvl_preset_1',
+          title: '🌱 植物成長',
+          completed: false,
+          cards: [
+            { id: 'p1_c0', src: createSVG('🌱', '1. 種子發芽', '#fef3c7'), title: '1. 種子發芽', originalIndex: 0 },
+            { id: 'p1_c1', src: createSVG('🌿', '2. 長出小樹', '#dcfce7'), title: '2. 長出小樹', originalIndex: 1 },
+            { id: 'p1_c2', src: createSVG('🌻', '3. 開出花朵', '#e0f2fe'), title: '3. 開出花朵', originalIndex: 2 }
+          ],
+          cardPool: [],
+          slots: [null, null, null]
+        },
+        {
+          id: 'lvl_preset_2',
+          title: '🧼 洗手步驟',
+          completed: false,
+          cards: [
+            { id: 'p2_c0', src: createSVG('💧', '1. 弄濕搓皂', '#e0f2fe'), title: '1. 弄濕搓皂', originalIndex: 0 },
+            { id: 'p2_c1', src: createSVG('🧼', '2. 仔細沖水', '#fef3c7'), title: '2. 仔細沖水', originalIndex: 1 },
+            { id: 'p2_c2', src: createSVG('✨', '3. 擦乾雙手', '#dcfce7'), title: '3. 擦乾雙手', originalIndex: 2 }
+          ],
+          cardPool: [],
+          slots: [null, null, null]
+        },
+        {
+          id: 'lvl_preset_3',
+          title: '🐻 小熊的一天',
+          completed: false,
+          cards: [
+            { id: 'p3_c0', src: createSVG('☀️', '1. 太陽起床', '#fff7ed'), title: '1. 太陽起床', originalIndex: 0 },
+            { id: 'p3_c1', src: createSVG('🥣', '2. 吃好早餐', '#fef2f2'), title: '2. 吃好早餐', originalIndex: 1 },
+            { id: 'p3_c2', src: createSVG('🎒', '3. 快樂上學', '#f0fdf4'), title: '3. 快樂上學', originalIndex: 2 }
+          ],
+          cardPool: [],
+          slots: [null, null, null]
+        }
+      ];
+
+      // Shuffle card pool for each preset level
+      levels.forEach(lvl => {
+        lvl.cardPool = lvl.cards.map(c => c.id);
+        shuffleArray(lvl.cardPool);
+      });
+
+      activeLevelId = levels[0].id;
+      playPopSound();
+      renderApp();
+    }
+
+    // Shuffle Array Utility
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    // Get Active Level Reference
+    function getActiveLevel() {
+      return levels.find(l => l.id === activeLevelId) || null;
+    }
+
+    // Switch Tab Level
+    function switchTab(levelId) {
+      initAudio();
+      playPopSound();
+      activeLevelId = levelId;
+      clearErrorHighlights();
+      renderApp();
+    }
+
+    // Toggle Edit / Student Mode
+    function toggleEditMode() {
+      initAudio();
+      playPopSound();
+      isEditMode = !isEditMode;
+
+      const btnLabel = document.getElementById('modeToggleLabel');
+      const editPanel = document.getElementById('teacherEditPanel');
+      const editNotice = document.getElementById('editModeNotice');
+
+      if (isEditMode) {
+        btnLabel.innerText = "🎮 切回學生模式";
+        editPanel.classList.remove('hidden');
+        editNotice.classList.remove('hidden');
+      } else {
+        btnLabel.innerText = "⚙️ 老師編輯模式";
+        editPanel.classList.add('hidden');
+        editNotice.classList.add('hidden');
+      }
+
+      renderTabs();
+    }
+
+    // Add New Level Tab
+    function addNewTab() {
+      initAudio();
+      playPopSound();
+      const newLevelId = `lvl_custom_${Date.now()}`;
+      const newLevelNumber = levels.length + 1;
+      const newLevelTitle = `關卡 ${newLevelNumber}`;
+
+      const newLevel = {
+        id: newLevelId,
+        title: newLevelTitle,
+        completed: false,
+        cards: [],
+        cardPool: [],
+        slots: [null, null, null]
+      };
+
+      levels.push(newLevel);
+      activeLevelId = newLevelId;
+      renderApp();
+    }
+
+    // Rename Tab
+    function renameTab(levelId, event) {
+      if (event) event.stopPropagation();
+      const lvl = levels.find(l => l.id === levelId);
+      if (!lvl) return;
+
+      const newTitle = prompt("請輸入關卡名稱：", lvl.title);
+      if (newTitle && newTitle.trim() !== "") {
+        lvl.title = newTitle.trim();
+        renderTabs();
+        if (activeLevelId === levelId) {
+          document.getElementById('editingTabNameDisplay').innerText = lvl.title;
+        }
+      }
+    }
+
+    // Delete Tab
+    function deleteTab(levelId, event) {
+      if (event) event.stopPropagation();
+      if (levels.length <= 1) {
+        alert("最少要保留 1 個關卡喔！");
+        return;
+      }
+
+      const lvl = levels.find(l => l.id === levelId);
+      if (!lvl) return;
+
+      if (confirm(`確定要刪除關卡「${lvl.title}」嗎？`)) {
+        levels = levels.filter(l => l.id !== levelId);
+        if (activeLevelId === levelId) {
+          activeLevelId = levels[0].id;
+        }
+        renderApp();
+      }
+    }
+
+    // Upload 3 Images for Active Tab
+    function handleTabFileUpload(event) {
+      initAudio();
+      const files = Array.from(event.target.files);
+
+      if (files.length < 3) {
+        alert("請選擇 3 張圖片作為這個關卡的第 1、2、3 步圖咭！");
+        return;
+      }
+
+      const currentLvl = getActiveLevel();
+      if (!currentLvl) return;
+
+      const selectedFiles = files.slice(0, 3);
+      const loadedCards = [];
+      let loadedCount = 0;
+
+      selectedFiles.forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          loadedCards.push({
+            id: `card_${currentLvl.id}_${Date.now()}_${index}`,
+            src: e.target.result,
+            title: `步驟 ${index + 1}`,
+            originalIndex: index
+          });
+          loadedCount++;
+
+          if (loadedCount === 3) {
+            loadedCards.sort((a, b) => a.originalIndex - b.originalIndex);
+            
+            // Assign to current level
+            currentLvl.cards = loadedCards;
+            currentLvl.slots = [null, null, null];
+            currentLvl.completed = false;
+            currentLvl.cardPool = currentLvl.cards.map(c => c.id);
+            shuffleArray(currentLvl.cardPool);
+
+            clearErrorHighlights();
+            renderApp();
+            playPopSound();
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    /* ==========================================
+       Main Application Renderers
+       ========================================== */
+
+    function renderApp() {
+      renderTabs();
+      renderGameBoard();
+    }
+
+    // Render Tab Bar
+    function renderTabs() {
+      const container = document.getElementById('tabsContainer');
+      container.innerHTML = '';
+
+      let completedCount = 0;
+
+      levels.forEach((lvl, idx) => {
+        if (lvl.completed) completedCount++;
+
+        const isActive = lvl.id === activeLevelId;
+
+        const tabBtn = document.createElement('div');
+        tabBtn.onclick = () => switchTab(lvl.id);
+        tabBtn.className = `flex items-center gap-2 px-4 py-2.5 rounded-2xl font-black text-sm sm:text-base cursor-pointer transition-all border-b-4 shrink-0 shadow-sm ${
+          isActive
+            ? 'bg-amber-400 text-slate-900 border-amber-600 scale-105 shadow-md'
+            : 'bg-white/90 text-slate-600 hover:bg-slate-100 border-slate-300'
+        }`;
+
+        // Tab Title HTML
+        let tabHTML = `
+          <span>${lvl.title}</span>
+          ${lvl.completed ? `<span class="bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">👍 已完成</span>` : ''}
+        `;
+
+        // Edit Controls on Tab when in Teacher Edit Mode
+        if (isEditMode) {
+          tabHTML += `
+            <div class="flex items-center gap-1 ml-1 opacity-80 hover:opacity-100">
+              <button onclick="renameTab('${lvl.id}', event)" title="修改名稱" class="p-1 hover:bg-black/10 rounded-lg text-xs">✏️</button>
+              <button onclick="deleteTab('${lvl.id}', event)" title="刪除關卡" class="p-1 hover:bg-rose-200 text-rose-700 rounded-lg text-xs">🗑️</button>
+            </div>
+          `;
+        }
+
+        tabBtn.innerHTML = tabHTML;
+        container.appendChild(tabBtn);
+      });
+
+      // Show "Add Level" button in Tab Bar during Edit Mode
+      if (isEditMode) {
+        const addBtn = document.createElement('button');
+        addBtn.onclick = addNewTab;
+        addBtn.className = 'flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-black text-sm bg-emerald-500 hover:bg-emerald-600 text-white border-b-4 border-emerald-700 shadow-sm transition shrink-0';
+        addBtn.innerHTML = `<span>➕ 新增關卡</span>`;
+        container.appendChild(addBtn);
+      }
+
+      // Update Completion Badge
+      document.getElementById('completionBadgeSummary').innerText = `已完成: ${completedCount} / ${levels.length}`;
+
+      // Update Edit Panel Title
+      const currentLvl = getActiveLevel();
+      if (currentLvl) {
+        document.getElementById('editingTabNameDisplay').innerText = currentLvl.title;
+      }
+    }
+
+    // Render Active Game Board
+    function renderGameBoard() {
+      const currentLvl = getActiveLevel();
+      const cardPoolEl = document.getElementById('cardPool');
+      const emptyStateEl = document.getElementById('emptyState');
+      const countEl = document.getElementById('cardPoolCount');
+
+      if (!currentLvl) return;
+
+      // Update Pool Count
+      countEl.innerText = `待排序：${currentLvl.cardPool.length} / ${currentLvl.cards.length}`;
+
+      // Clear existing cards in Pool container
+      cardPoolEl.querySelectorAll('.card-item').forEach(el => el.remove());
+
+      if (currentLvl.cards.length === 0) {
+        emptyStateEl.classList.remove('hidden');
+      } else {
+        emptyStateEl.classList.add('hidden');
+
+        // Render Card Pool items
+        currentLvl.cardPool.forEach(cardId => {
+          const cardData = currentLvl.cards.find(c => c.id === cardId);
+          if (cardData) {
+            const cardEl = createCardElement(cardData, 'pool');
+            cardPoolEl.appendChild(cardEl);
+          }
+        });
+      }
+
+      // Render 3 Slots
+      for (let i = 0; i < 3; i++) {
+        const slotEl = document.getElementById(`slot-${i}`);
+        const currentCardId = currentLvl.slots[i];
+
+        // Remove old card element
+        const existingCard = slotEl.querySelector('.card-item');
+        if (existingCard) existingCard.remove();
+
+        const placeholderTexts = slotEl.querySelectorAll('.placeholder-text');
+
+        if (currentCardId) {
+          placeholderTexts.forEach(el => el.classList.add('hidden'));
+
+          const cardData = currentLvl.cards.find(c => c.id === currentCardId);
+          if (cardData) {
+            const cardEl = createCardElement(cardData, 'slot', i);
+            slotEl.appendChild(cardEl);
+          }
+        } else {
+          placeholderTexts.forEach(el => el.classList.remove('hidden'));
+        }
+      }
+    }
+
+    // Card Component Generator
+    function createCardElement(cardData, location, slotIndex = null) {
+      const cardContainer = document.createElement('div');
+      cardContainer.id = `element-${cardData.id}`;
+      cardContainer.draggable = true;
+      cardContainer.className = `card-item w-full h-full max-w-full rounded-xl bg-white border-4 border-indigo-300 shadow-md hover:shadow-xl flex flex-col items-center overflow-hidden cursor-grab active:cursor-grabbing p-1.5 transition-all relative group`;
+
+      cardContainer.innerHTML = `
+        <div class="w-full h-full flex-1 rounded-lg overflow-hidden bg-slate-100 flex items-center justify-center relative">
+          <img src="${cardData.src}" alt="${cardData.title}" class="w-full h-full object-contain pointer-events-none">
+        </div>
+        <div class="w-full py-1 text-center font-extrabold text-slate-700 text-xs sm:text-sm truncate">
+          ${cardData.title}
+        </div>
+      `;
+
+      // Drag and Drop Events
+      cardContainer.addEventListener('dragstart', (e) => handleDragStart(e, cardData.id));
+      cardContainer.addEventListener('dragend', handleDragEnd);
+
+      // Touch / Click Support
+      cardContainer.addEventListener('click', () => handleCardClick(cardData.id, location, slotIndex));
+
+      return cardContainer;
+    }
+
+    /* ==========================================
+       Interactions (Drag & Drop + Click/Tap)
+       ========================================== */
+
+    function handleDragStart(e, cardId) {
+      initAudio();
+      draggedCardId = cardId;
+      e.dataTransfer.setData('text/plain', cardId);
+      e.dataTransfer.effectAllowed = 'move';
+
+      setTimeout(() => {
+        const el = document.getElementById(`element-${cardId}`);
+        if (el) el.classList.add('opacity-40');
+      }, 0);
+    }
+
+    function handleDragEnd(e) {
+      const el = document.getElementById(`element-${draggedCardId}`);
+      if (el) el.classList.remove('opacity-40');
+      draggedCardId = null;
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      e.currentTarget.classList.add('drag-over-active');
+    }
+
+    function handleDragLeave(e) {
+      e.currentTarget.classList.remove('drag-over-active');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      const slotEl = e.currentTarget;
+      slotEl.classList.remove('drag-over-active');
+
+      const targetSlotIndex = parseInt(slotEl.getAttribute('data-slot'));
+      const cardId = e.dataTransfer.getData('text/plain') || draggedCardId;
+
+      if (cardId !== null && targetSlotIndex !== undefined) {
+        moveCardToSlot(cardId, targetSlotIndex);
+      }
+    }
+
+    function handleCardClick(cardId, location, currentSlotIndex) {
+      initAudio();
+      playPopSound();
+
+      const currentLvl = getActiveLevel();
+      if (!currentLvl) return;
+
+      if (location === 'pool') {
+        const emptySlotIdx = currentLvl.slots.findIndex(s => s === null);
+        if (emptySlotIdx !== -1) {
+          moveCardToSlot(cardId, emptySlotIdx);
+        }
+      } else if (location === 'slot') {
+        returnCardToPool(cardId);
+      }
+    }
+
+    function moveCardToSlot(cardId, targetSlotIndex) {
+      playPopSound();
+      const currentLvl = getActiveLevel();
+      if (!currentLvl) return;
+
+      // Remove from pool if present
+      const poolIdx = currentLvl.cardPool.indexOf(cardId);
+      if (poolIdx !== -1) {
+        currentLvl.cardPool.splice(poolIdx, 1);
+      }
+
+      // Remove from previous slot if present
+      const existingSlotIdx = currentLvl.slots.indexOf(cardId);
+      if (existingSlotIdx !== -1) {
+        currentLvl.slots[existingSlotIdx] = null;
+      }
+
+      // Return existing slot card to pool if occupied
+      if (currentLvl.slots[targetSlotIndex] && currentLvl.slots[targetSlotIndex] !== cardId) {
+        currentLvl.cardPool.push(currentLvl.slots[targetSlotIndex]);
+      }
+
+      // Insert card
+      currentLvl.slots[targetSlotIndex] = cardId;
+
+      clearErrorHighlights();
+      renderGameBoard();
+
+      // Auto validate when all 3 slots are filled
+      if (currentLvl.slots.every(s => s !== null)) {
+        checkAnswer();
+      }
+    }
+
+    function returnCardToPool(cardId) {
+      const currentLvl = getActiveLevel();
+      if (!currentLvl) return;
+
+      const slotIdx = currentLvl.slots.indexOf(cardId);
+      if (slotIdx !== -1) {
+        currentLvl.slots[slotIdx] = null;
+      }
+      if (!currentLvl.cardPool.includes(cardId)) {
+        currentLvl.cardPool.push(cardId);
+      }
+      clearErrorHighlights();
+      renderGameBoard();
+    }
+
+    /* ==========================================
+       Game Rules & Validation Engine
+       ========================================== */
+
+    function checkAnswer() {
+      const currentLvl = getActiveLevel();
+      if (!currentLvl) return;
+
+      let isAllCorrect = true;
+      const errorSlots = [];
+
+      for (let i = 0; i < 3; i++) {
+        const cardData = currentLvl.cards.find(c => c.id === currentLvl.slots[i]);
+        if (!cardData || cardData.originalIndex !== i) {
+          isAllCorrect = false;
+          errorSlots.push(i);
+        }
+      }
+
+      if (isAllCorrect) {
+        // Success
+        currentLvl.completed = true;
+        renderTabs();
+
+        setTimeout(() => {
+          playVictorySound();
+          triggerConfetti();
+          openSuccessModal();
+        }, 200);
+      } else {
+        // Incorrect
+        setTimeout(() => {
+          playErrorSound();
+          showErrorHighlights(errorSlots);
+        }, 200);
+      }
+    }
+
+    function showErrorHighlights(errorSlots) {
+      document.getElementById('errorBanner').classList.remove('hidden');
+      errorSlots.forEach(slotIdx => {
+        const slotEl = document.getElementById(`slot-${slotIdx}`);
+        slotEl.classList.add('error-flash');
+      });
+    }
+
+    function clearErrorHighlights() {
+      document.getElementById('errorBanner').classList.add('hidden');
+      for (let i = 0; i < 3; i++) {
+        const slotEl = document.getElementById(`slot-${i}`);
+        slotEl.classList.remove('error-flash');
+      }
+    }
+
+    /* ==========================================
+       Action Buttons & Modal Controls
+       ========================================== */
+
+    // "💡 幫我排第一張" Button
+    function helpFirstCard() {
+      initAudio();
+      const currentLvl = getActiveLevel();
+      if (!currentLvl || currentLvl.cards.length < 3) {
+        alert("請先為這個關卡載入或上載 3 張圖咭！");
+        return;
+      }
+
+      const firstCard = currentLvl.cards.find(c => c.originalIndex === 0);
+      if (!firstCard) return;
+
+      if (currentLvl.slots[0] === firstCard.id) {
+        playPopSound();
+        return;
+      }
+
+      moveCardToSlot(firstCard.id, 0);
+    }
+
+    // "🔄 重新開始" Button
+    function restartCurrentTab() {
+      initAudio();
+      const currentLvl = getActiveLevel();
+      if (!currentLvl || currentLvl.cards.length === 0) return;
+
+      playPopSound();
+      currentLvl.slots = [null, null, null];
+      currentLvl.cardPool = currentLvl.cards.map(c => c.id);
+      shuffleArray(currentLvl.cardPool);
+
+      clearErrorHighlights();
+      renderGameBoard();
+    }
+
+    function triggerConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 110,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+      }
+    }
+
+    function openSuccessModal() {
+      const modal = document.getElementById('successModal');
+      const modalBox = modal.querySelector('div');
+      const currentLvl = getActiveLevel();
+
+      const nextLevelExists = levels.findIndex(l => l.id === activeLevelId) < levels.length - 1;
+      const nextBtn = document.getElementById('nextLevelBtn');
+
+      if (nextLevelExists) {
+        nextBtn.classList.remove('hidden');
+      } else {
+        nextBtn.classList.add('hidden');
+      }
+
+      document.getElementById('successModalMessage').innerText = `太棒了！你已經成功完成「${currentLvl ? currentLvl.title : '本關卡'}」！`;
+
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      modalBox.classList.remove('scale-90');
+      modalBox.classList.add('scale-100');
+    }
+
+    function closeModalOnly() {
+      initAudio();
+      playPopSound();
+      const modal = document.getElementById('successModal');
+      const modalBox = modal.querySelector('div');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      modalBox.classList.remove('scale-100');
+      modalBox.classList.add('scale-90');
+    }
+
+    function goToNextLevel() {
+      closeModalOnly();
+      const currentIdx = levels.findIndex(l => l.id === activeLevelId);
+      if (currentIdx < levels.length - 1) {
+        switchTab(levels[currentIdx + 1].id);
+      }
+    }
+
+    /* ==========================================
+       Initialization
+       ========================================== */
+    window.onload = function() {
+      loadPresetLevels();
+    };
+  </script>
+</body>
+</html>
