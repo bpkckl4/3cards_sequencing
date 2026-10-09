@@ -4,344 +4,185 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>圖咭排序遊戲(初階)</title>
+  <!-- Google Fonts for friendly rounded text -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+  <!-- Canvas Confetti for winning effect -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  
   <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-light: #EEF2FF;
+      --secondary: #06B6D4;
+      --accent-yellow: #F59E0B;
+      --accent-green: #10B981;
+      --accent-red: #EF4444;
+      --bg-color: #F0F9FF;
+      --card-bg: #FFFFFF;
+      --text-main: #1E293B;
+      --border-radius: 18px;
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       user-select: none;
+      -webkit-user-select: none;
     }
 
     body {
-      font-family: "Microsoft JhengHei", "PingFang HK", "Helvetica Neue", sans-serif;
-      background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+      font-family: 'Noto Sans TC', 'Fredoka', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      color: #1e293b;
-      padding-bottom: 30px;
+      align-items: center;
+      padding: 15px;
     }
 
-    /* Header & Mode Bar */
     header {
-      background-color: #ffffff;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-      padding: 12px 20px;
+      width: 100%;
+      max-width: 1000px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-      z-index: 10;
+      background: #FFFFFF;
+      padding: 15px 25px;
+      border-radius: var(--border-radius);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+      border: 3px solid #E0F2FE;
     }
 
     h1 {
-      font-size: 1.6rem;
-      color: #0284c7;
+      font-size: 1.8rem;
+      color: var(--primary);
       display: flex;
       align-items: center;
-      gap: 8px;
-    }
-
-    .header-btns {
-      display: flex;
       gap: 10px;
-      align-items: center;
     }
 
-    .btn {
-      padding: 8px 16px;
-      font-size: 1rem;
-      font-weight: bold;
-      border: none;
-      border-radius: 20px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-
-    .btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-    }
-
-    .btn:active {
-      transform: translateY(0);
-    }
-
-    .btn-mode {
-      background-color: #f1f5f9;
-      color: #334155;
-      border: 2px solid #cbd5e1;
-    }
-
-    .btn-mode.active-edit {
-      background-color: #fef3c7;
-      color: #b45309;
-      border-color: #f59e0b;
-    }
-
-    .btn-preset {
-      background-color: #e0e7ff;
-      color: #3730a3;
-    }
-
-    .btn-add-tab {
-      background-color: #dcfce7;
-      color: #166534;
-    }
-
-    /* Tabs Bar */
-    .tabs-container {
-      background-color: #0284c7;
-      padding: 10px 15px 0 15px;
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      box-shadow: inset 0 -2px 5px rgba(0,0,0,0.1);
-    }
-
-    .tab-btn {
-      padding: 10px 20px;
-      background-color: #38bdf8;
-      color: #ffffff;
-      font-size: 1.1rem;
-      font-weight: bold;
-      border: none;
-      border-radius: 12px 12px 0 0;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      white-space: nowrap;
-      transition: background 0.2s;
-    }
-
-    .tab-btn:hover {
-      background-color: #7dd3fc;
-      color: #0f172a;
-    }
-
-    .tab-btn.active {
-      background-color: #f0f9ff;
-      color: #0284c7;
-      box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
-    }
-
-    .tab-badge {
-      font-size: 0.85rem;
-      background-color: #22c55e;
+    .teacher-btn {
+      background: var(--primary);
       color: white;
-      padding: 2px 8px;
-      border-radius: 10px;
-    }
-
-    /* Main Container */
-    main {
-      max-width: 1200px;
-      width: 95%;
-      margin: 20px auto;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    /* Teacher Edit Panel */
-    .edit-panel {
-      background: #ffffff;
-      border: 3px dashed #f59e0b;
-      border-radius: 16px;
-      padding: 20px;
-      display: none;
-      flex-direction: column;
-      gap: 15px;
-      animation: fadeIn 0.3s ease;
-    }
-
-    .edit-panel.show {
-      display: flex;
-    }
-
-    .edit-panel h2 {
-      font-size: 1.3rem;
-      color: #b45309;
-    }
-
-    .edit-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
-      align-items: center;
-    }
-
-    .edit-input-group {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      flex: 1;
-      min-width: 200px;
-    }
-
-    .edit-input-group label {
-      font-weight: bold;
-      font-size: 0.95rem;
-    }
-
-    .edit-input-group input[type="text"] {
-      padding: 8px 12px;
-      border: 2px solid #cbd5e1;
-      border-radius: 8px;
-      font-size: 1rem;
-    }
-
-    .card-edit-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 15px;
-      margin-top: 10px;
-    }
-
-    .card-edit-box {
-      border: 2px solid #e2e8f0;
+      border: none;
+      padding: 10px 18px;
       border-radius: 12px;
-      padding: 12px;
-      background: #fafafa;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
       display: flex;
-      flex-direction: column;
-      gap: 10px;
       align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
     }
 
-    .card-edit-preview {
+    .teacher-btn:hover {
+      transform: translateY(-2px);
+      background: #4338CA;
+    }
+
+    .main-container {
       width: 100%;
-      height: 120px;
-      object-fit: contain;
-      border-radius: 8px;
-      background: #e2e8f0;
-    }
-
-    /* Card Source Area */
-    .section-box {
-      background-color: #ffffff;
-      border-radius: 20px;
-      padding: 20px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      max-width: 1000px;
       display: flex;
       flex-direction: column;
-      gap: 15px;
+      gap: 25px;
+    }
+
+    /* Section Styling */
+    .section-box {
+      background: white;
+      border-radius: var(--border-radius);
+      padding: 20px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.04);
+      border: 3px solid #E2E8F0;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px dashed #E2E8F0;
     }
 
     .section-title {
       font-size: 1.3rem;
+      font-weight: 900;
       color: #334155;
-      font-weight: bold;
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .cards-pool {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      min-height: 220px;
-      padding: 10px;
-      background-color: #f8fafc;
-      border: 2px dashed #cbd5e1;
-      border-radius: 16px;
-      align-items: center;
-    }
-
-    /* Universal Card Style */
-    .card {
-      background-color: #ffffff;
-      border: 3px solid #38bdf8;
-      border-radius: 16px;
-      padding: 10px;
-      cursor: grab;
-      display: flex;
-      flex-direction: column;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-      width: 100%;
-      height: 100%;
-      min-height: 190px;
-      justify-content: space-between;
     }
 
-    .card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.3);
+    /* Teacher Edit Panel */
+    #teacherPanel {
+      display: none;
+      background: #FFFBEB;
+      border-color: #FDE68A;
+      animation: fadeIn 0.3s ease;
     }
 
-    .card.dragging {
-      opacity: 0.5;
-      transform: scale(0.95);
+    .teacher-slots {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
+      margin-bottom: 15px;
     }
 
-    .card.selected-tap {
-      border-color: #f59e0b;
-      box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.4);
-      transform: translateY(-4px);
-    }
-
-    .card-img {
-      width: 100%;
-      height: 120px;
-      object-fit: contain;
-      border-radius: 10px;
-      pointer-events: none;
-    }
-
-    .card-footer {
-      width: 100%;
+    .slot-editor {
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      border: 2px solid #FCD34D;
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 6px;
-      background-color: #f1f5f9;
-      padding: 6px 10px;
-      border-radius: 10px;
+      flex-direction: column;
+      gap: 10px;
     }
 
-    .card-text {
-      font-size: 1.1rem;
-      font-weight: bold;
-      color: #1e293b;
-      flex: 1;
+    .slot-editor label {
+      font-weight: 700;
+      color: #92400E;
+    }
+
+    .file-input-btn {
+      background: #F3F4F6;
+      border: 2px dashed #9CA3AF;
+      padding: 10px;
+      border-radius: 8px;
       text-align: center;
-    }
-
-    .icon-btn {
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      border-radius: 50%;
-      width: 34px;
-      height: 34px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       cursor: pointer;
-      font-size: 1.1rem;
-      transition: all 0.2s;
-      flex-shrink: 0;
+      font-size: 0.9rem;
+      color: #4B5563;
+      transition: background 0.2s;
     }
 
-    .icon-btn:hover {
-      background-color: #e0f2fe;
-      border-color: #0284c7;
-      transform: scale(1.1);
+    .file-input-btn:hover {
+      background: #E5E7EB;
     }
 
-    /* Target Drop Area */
-    .sort-area-header {
+    .text-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 2px solid #CBD5E1;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .text-input:focus {
+      border-color: var(--primary);
+    }
+
+    .demo-btn-group {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -349,814 +190,123 @@
       gap: 10px;
     }
 
-    .sort-controls {
+    .save-status-tag {
+      color: #059669;
+      font-weight: 700;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-secondary {
+      background: #10B981;
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    /* Order Area (排序區) */
+    .order-actions {
       display: flex;
       gap: 10px;
     }
 
-    .btn-hint {
-      background-color: #fef08a;
-      color: #854d0e;
-      border: 2px solid #facc15;
+    .btn-action {
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 2px solid var(--primary);
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
     }
 
-    .btn-reset {
-      background-color: #fee2e2;
-      color: #991b1b;
-      border: 2px solid #fca5a5;
+    .btn-action:hover {
+      background: var(--primary);
+      color: white;
     }
 
-    .drop-container {
+    .order-grid {
       display: grid;
       grid-template-columns: 1fr auto 1fr auto 1fr;
       align-items: center;
       gap: 10px;
-      background-color: #f0f9ff;
-      border: 3px dashed #0284c7;
-      border-radius: 20px;
-      padding: 20px 15px;
-      min-height: 250px;
+      min-height: 260px;
+    }
+
+    .arrow {
+      font-size: 2rem;
+      color: #94A3B8;
+      font-weight: bold;
+      text-align: center;
     }
 
     .drop-box {
-      background-color: #ffffff;
-      border: 3px dashed #94a3b8;
+      background: #F8FAFC;
+      border: 3px dashed #CBD5E1;
       border-radius: 16px;
-      height: 220px;
+      min-height: 240px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       position: relative;
-      transition: all 0.2s;
-      padding: 8px;
+      transition: all 0.2s ease;
+      padding: 10px;
     }
 
     .drop-box.drag-over {
-      border-color: #0284c7;
-      background-color: #e0f2fe;
+      background: #EEF2FF;
+      border-color: var(--primary);
       transform: scale(1.02);
     }
 
-    .drop-box-number {
+    .box-label {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      background-color: #cbd5e1;
+      top: 8px;
+      left: 12px;
+      background: #E2E8F0;
       color: #475569;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      font-size: 0.9rem;
-      pointer-events: none;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
     }
 
-    .drop-box-placeholder {
-      color: #94a3b8;
-      font-size: 1.1rem;
-      font-weight: bold;
-      pointer-events: none;
+    /* Wrong order blinking warning */
+    .drop-box.wrong-flash {
+      animation: flashRed 0.6s infinite ease-in-out;
+      border: 3px solid var(--accent-red) !important;
     }
 
-    .arrow-icon {
-      font-size: 2rem;
-      color: #0284c7;
-      font-weight: bold;
-      text-align: center;
+    @keyframes flashRed {
+      0%, 100% {
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
+        border-color: #EF4444;
+      }
+      50% {
+        box-shadow: 0 0 2px rgba(239, 68, 68, 0.2);
+        border-color: #FCA5A5;
+      }
     }
 
-    /* Error Flash Effect */
-    @keyframes flash-red {
-      0%, 100% { border-color: #ef4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.8); }
-      50% { border-color: #cbd5e1; box-shadow: none; }
-    }
-
-    .card.wrong-flash {
-      animation: flash-red 0.5s ease-in-out 3;
-      border-color: #ef4444 !important;
-    }
-
-    /* Modal Overlay */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background-color: rgba(0, 0, 0, 0.6);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      animation: fadeIn 0.3s;
-    }
-
-    .modal-overlay.show {
-      display: flex;
-    }
-
-    .modal-card {
-      background-color: #ffffff;
-      border-radius: 24px;
-      padding: 30px 40px;
-      text-align: center;
-      max-width: 450px;
-      width: 90%;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    /* Card Pool Area (圖咭區) */
+    .pool-grid {
       display: flex;
       flex-direction: column;
-      align-items: center;
       gap: 15px;
-      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      width: 100%;
     }
 
-    .modal-icon {
-      font-size: 4.5rem;
-      line-height: 1;
-    }
-
-    .modal-title {
-      font-size: 2rem;
-      font-weight: bold;
-      color: #0284c7;
-    }
-
-    .modal-desc {
-      font-size: 1.1rem;
-      color: #475569;
-      line-height: 1.5;
-    }
-
-    .btn-modal-close {
-      background-color: #0284c7;
-      color: white;
-      padding: 10px 28px;
-      font-size: 1.1rem;
-      margin-top: 10px;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    @keyframes popIn {
-      from { transform: scale(0.7); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-
-    /* Recording Button Active */
-    .icon-btn.recording {
-      background-color: #ef4444;
-      color: white;
-      animation: pulse 1s infinite;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.15); }
-      100% { transform: scale(1); }
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .drop-container {
-        grid-template-columns: 1fr;
-        gap: 15px;
-      }
-      .arrow-icon {
-        transform: rotate(90deg);
-      }
-      .cards-pool, .card-edit-grid {
-        grid-template-columns: 1fr;
-      }
-      .drop-box {
-        height: 180px;
-      }
-    }
-  </style>
-</head>
-<body>
-
-  <!-- Header Section -->
-  <header>
-    <h1>🧩 圖咭排序遊戲 (初階)</h1>
-    <div class="header-btns">
-      <button class="btn btn-preset" onclick="loadPresetLevels()">✨ 載入預設範例關卡</button>
-      <button class="btn btn-mode" id="toggleEditBtn" onclick="toggleEditMode()">⚙️ 老師編輯模式</button>
-    </div>
-  </header>
-
-  <!-- Level Tabs Bar -->
-  <div class="tabs-container" id="tabsContainer">
-    <!-- Tabs dynamically injected -->
-  </div>
-
-  <main>
-    <!-- Teacher Edit Panel -->
-    <div class="edit-panel" id="editPanel">
-      <h2>⚙️ 關卡編輯器（設定目前關卡）</h2>
-      <div class="edit-row">
-        <div class="edit-input-group">
-          <label>關卡主題名稱：</label>
-          <input type="text" id="editLevelTitle" placeholder="例如：洗手步驟">
-        </div>
-        <button class="btn btn-add-tab" onclick="addNewTab()">➕ 新增關卡 Tab</button>
-        <button class="btn btn-reset" onclick="deleteCurrentTab()">🗑️ 刪除目前關卡</button>
-      </div>
-
-      <div class="card-edit-grid">
-        <!-- Edit Card 1 -->
-        <div class="card-edit-box">
-          <strong>圖咭 1 (順序第 1)</strong>
-          <img id="editImgPrev0" class="card-edit-preview" src="">
-          <input type="file" accept="image/*" onchange="handleImageUpload(event, 0)">
-          <div class="edit-input-group" style="width: 100%;">
-            <label>廣東話描述：</label>
-            <input type="text" id="editText0" onchange="updateCardText(0, this.value)">
-          </div>
-        </div>
-        <!-- Edit Card 2 -->
-        <div class="card-edit-box">
-          <strong>圖咭 2 (順序第 2)</strong>
-          <img id="editImgPrev1" class="card-edit-preview" src="">
-          <input type="file" accept="image/*" onchange="handleImageUpload(event, 1)">
-          <div class="edit-input-group" style="width: 100%;">
-            <label>廣東話描述：</label>
-            <input type="text" id="editText1" onchange="updateCardText(1, this.value)">
-          </div>
-        </div>
-        <!-- Edit Card 3 -->
-        <div class="card-edit-box">
-          <strong>圖咭 3 (順序第 3)</strong>
-          <img id="editImgPrev2" class="card-edit-preview" src="">
-          <input type="file" accept="image/*" onchange="handleImageUpload(event, 2)">
-          <div class="edit-input-group" style="width: 100%;">
-            <label>廣東話描述：</label>
-            <input type="text" id="editText2" onchange="updateCardText(2, this.value)">
-          </div>
-        </div>
-      </div>
-      <div style="text-align: right; margin-top: 10px;">
-        <button class="btn btn-add-tab" onclick="saveLevelTitle()">💾 儲存修改</button>
-      </div>
-    </div>
-
-    <!-- Card Source Pool -->
-    <section class="section-box">
-      <div class="section-title">
-        <span>📦 圖咭區 (請將圖咭拖拉或點擊排到下方)</span>
-      </div>
-      <div class="cards-pool" id="cardsPool">
-        <!-- Cards dynamically injected -->
-      </div>
-    </section>
-
-    <!-- Target Drop Sort Area -->
-    <section class="section-box">
-      <div class="sort-area-header">
-        <div class="section-title">🎯 排序區</div>
-        <div class="sort-controls">
-          <button class="btn btn-hint" onclick="hintFirstCard()">💡 幫我排第一張</button>
-          <button class="btn btn-reset" onclick="resetCurrentLevel()">🔄 重新開始</button>
-        </div>
-      </div>
-
-      <div class="drop-container">
-        <!-- Drop Box 1 -->
-        <div class="drop-box" data-index="0" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="handleBoxClick(0)">
-          <span class="drop-box-number">1</span>
-          <span class="drop-box-placeholder">放入第 1 張圖咭</span>
-        </div>
-
-        <div class="arrow-icon">➔</div>
-
-        <!-- Drop Box 2 -->
-        <div class="drop-box" data-index="1" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="handleBoxClick(1)">
-          <span class="drop-box-number">2</span>
-          <span class="drop-box-placeholder">放入第 2 張圖咭</span>
-        </div>
-
-        <div class="arrow-icon">➔</div>
-
-        <!-- Drop Box 3 -->
-        <div class="drop-box" data-index="2" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="handleBoxClick(2)">
-          <span class="drop-box-number">3</span>
-          <span class="drop-box-placeholder">放入第 3 張圖咭</span>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- Modal Feedback Window -->
-  <div class="modal-overlay" id="modalOverlay">
-    <div class="modal-card">
-      <div class="modal-icon" id="modalIcon">👍</div>
-      <div class="modal-title" id="modalTitle">做得好！</div>
-      <div class="modal-desc" id="modalDesc">你成功完成了排序與語音朗讀！</div>
-      <button class="btn btn-modal-close" onclick="closeModal()">太棒了！</button>
-    </div>
-  </div>
-
-  <script>
-    // Audio Context for sound effects
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-    function playSound(type) {
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      if (type === 'success') {
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
-        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.3); // A5
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.3);
-      } else if (type === 'error') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(220, audioCtx.currentTime); // A3
-        osc.frequency.setValueAtTime(164.81, audioCtx.currentTime + 0.15); // E3
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.4);
-      }
-    }
-
-    // Default SVG Placeholder
-    function createPlaceholderSVG(text, color) {
-      return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200"><rect width="300" height="200" fill="${color}" rx="15"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="26" font-weight="bold" fill="%23ffffff">${encodeURIComponent(text)}</text></svg>`;
-    }
-
-    // Default Preset Levels Data
-    const defaultLevels = [
-      {
-        id: 'level_1',
-        title: '🧼 洗手步驟',
-        completed: false,
-        cards: [
-          { id: 'c1_1', correctOrder: 0, text: '濕水加皂液', img: createPlaceholderSVG('1. 濕水加皂液', '#0284c7') },
-          { id: 'c1_2', correctOrder: 1, text: '搓手二十秒', img: createPlaceholderSVG('2. 搓手二十秒', '#0369a1') },
-          { id: 'c1_3', correctOrder: 2, text: '抹乾雙手', img: createPlaceholderSVG('3. 抹乾雙手', '#075985') }
-        ]
-      },
-      {
-        id: 'level_2',
-        title: '🌱 植物成長',
-        completed: false,
-        cards: [
-          { id: 'c2_1', correctOrder: 0, text: '播下種子', img: createPlaceholderSVG('1. 播下種子', '#16a34a') },
-          { id: 'c2_2', correctOrder: 1, text: '發芽生長', img: createPlaceholderSVG('2. 發芽生長', '#15803d') },
-          { id: 'c2_3', correctOrder: 2, text: '開出鮮花', img: createPlaceholderSVG('3. 開出鮮花', '#166534') }
-        ]
-      },
-      {
-        id: 'level_3',
-        title: '🐻 小熊的一天',
-        completed: false,
-        cards: [
-          { id: 'c3_1', correctOrder: 0, text: '早上起床', img: createPlaceholderSVG('1. 早上起床', '#f59e0b') },
-          { id: 'c3_2', correctOrder: 1, text: '吃吃早餐', img: createPlaceholderSVG('2. 吃吃早餐', '#d97706') },
-          { id: 'c3_3', correctOrder: 2, text: '開開心心上學', img: createPlaceholderSVG('3. 開心上學', '#b45309') }
-        ]
-      }
-    ];
-
-    // State Variables
-    let levels = JSON.parse(localStorage.getItem('card_game_levels')) || defaultLevels;
-    let currentLevelIndex = 0;
-    let isEditMode = false;
-    let selectedCardId = null; // For tap-to-move mode
-    let placedCards = [null, null, null]; // Drop slots state
-    let draggedCardId = null;
-
-    // Save Levels
-    function saveLevels() {
-      localStorage.setItem('card_game_levels', JSON.stringify(levels));
-    }
-
-    // Load Presets
-    function loadPresetLevels() {
-      if (confirm('確定要載入預設關卡嗎？這將重置現有關卡資料。')) {
-        levels = JSON.parse(JSON.stringify(defaultLevels));
-        saveLevels();
-        currentLevelIndex = 0;
-        initApp();
-      }
-    }
-
-    // Init App
-    function initApp() {
-      renderTabs();
-      loadCurrentLevel();
-    }
-
-    // Render Tabs
-    function renderTabs() {
-      const container = document.getElementById('tabsContainer');
-      container.innerHTML = '';
-      levels.forEach((lvl, idx) => {
-        const btn = document.createElement('button');
-        btn.className = `tab-btn ${idx === currentLevelIndex ? 'active' : ''}`;
-        btn.onclick = () => switchTab(idx);
-
-        let badge = lvl.completed ? '<span class="tab-badge">👍 已完成</span>' : '';
-        btn.innerHTML = `${lvl.title} ${badge}`;
-        container.appendChild(btn);
-      });
-    }
-
-    // Switch Tab
-    function switchTab(index) {
-      currentLevelIndex = index;
-      renderTabs();
-      loadCurrentLevel();
-      if (isEditMode) updateEditPanelValues();
-    }
-
-    // Load Current Level Data
-    function loadCurrentLevel() {
-      placedCards = [null, null, null];
-      selectedCardId = null;
-
-      // Clear drop boxes
-      document.querySelectorAll('.drop-box').forEach((box, i) => {
-        box.innerHTML = `
-          <span class="drop-box-number">${i + 1}</span>
-          <span class="drop-box-placeholder">放入第 ${i + 1} 張圖咭</span>
-        `;
-      });
-
-      // Shuffle cards for display in source pool
-      const curLvl = levels[currentLevelIndex];
-      let poolCards = [...curLvl.cards];
-      
-      // Seeded or random shuffle
-      poolCards.sort(() => Math.random() - 0.5);
-
-      renderCardsPool(poolCards);
-    }
-
-    // Render Cards in Pool
-    function renderCardsPool(cards) {
-      const pool = document.getElementById('cardsPool');
-      pool.innerHTML = '';
-
-      cards.forEach(card => {
-        const cardElem = createCardElement(card);
-        pool.appendChild(cardElem);
-      });
-    }
-
-    // Create Card DOM Element
-    function createCardElement(card) {
-      const div = document.createElement('div');
-      div.className = 'card';
-      div.draggable = true;
-      div.dataset.id = card.id;
-      div.dataset.order = card.correctOrder;
-
-      div.innerHTML = `
-        <img src="${card.img}" class="card-img" alt="${card.text}">
-        <div class="card-footer">
-          <button class="icon-btn" onclick="speakText(event, '${card.text}')" title="廣東話發音">🔊</button>
-          <span class="card-text">${card.text}</span>
-          <button class="icon-btn record-btn" onclick="startSpeechMatch(event, '${card.text}')" title="錄音語音比對">🎤</button>
-        </div>
-      `;
-
-      // Drag Events
-      div.addEventListener('dragstart', (e) => {
-        draggedCardId = card.id;
-        div.classList.add('dragging');
-        e.dataTransfer.setData('text/plain', card.id);
-      });
-
-      div.addEventListener('dragend', () => {
-        div.classList.remove('dragging');
-      });
-
-      // Tap-to-Move Selection
-      div.addEventListener('click', (e) => {
-        if (e.target.tagName === 'BUTTON') return; // Ignore button clicks
-        handleCardTap(card.id);
-      });
-
-      return div;
-    }
-
-    // Tap Card
-    function handleCardTap(cardId) {
-      if (selectedCardId === cardId) {
-        // Deselect
-        selectedCardId = null;
-        document.querySelectorAll('.card').forEach(c => c.classList.remove('selected-tap'));
-      } else {
-        selectedCardId = cardId;
-        document.querySelectorAll('.card').forEach(c => c.classList.remove('selected-tap'));
-        const activeCard = document.querySelector(`.card[data-id="${cardId}"]`);
-        if (activeCard) activeCard.classList.add('selected-tap');
-      }
-    }
-
-    // Drag & Drop Handlers
-    function handleDragOver(e) {
-      e.preventDefault();
-      e.currentTarget.classList.add('drag-over');
-    }
-
-    function handleDragLeave(e) {
-      e.currentTarget.classList.remove('drag-over');
-    }
-
-    function handleDrop(e) {
-      e.preventDefault();
-      const box = e.currentTarget;
-      box.classList.remove('drag-over');
-      const boxIndex = parseInt(box.dataset.index);
-
-      const cardId = e.dataTransfer.getData('text/plain') || draggedCardId;
-      if (cardId) {
-        moveCardToSlot(cardId, boxIndex);
-      }
-    }
-
-    function handleBoxClick(boxIndex) {
-      if (selectedCardId) {
-        moveCardToSlot(selectedCardId, boxIndex);
-        selectedCardId = null;
-        document.querySelectorAll('.card').forEach(c => c.classList.remove('selected-tap'));
-      }
-    }
-
-    // Move Card to Drop Box
-    function moveCardToSlot(cardId, slotIndex) {
-      const curLvl = levels[currentLevelIndex];
-      const cardObj = curLvl.cards.find(c => c.id === cardId);
-      if (!cardObj) return;
-
-      // If already in another slot, clear that slot
-      const existingSlotIndex = placedCards.indexOf(cardId);
-      if (existingSlotIndex !== -1) {
-        placedCards[existingSlotIndex] = null;
-        const oldBox = document.querySelector(`.drop-box[data-index="${existingSlotIndex}"]`);
-        oldBox.innerHTML = `
-          <span class="drop-box-number">${existingSlotIndex + 1}</span>
-          <span class="drop-box-placeholder">放入第 ${existingSlotIndex + 1} 張圖咭</span>
-        `;
-      }
-
-      // Place in new slot
-      placedCards[slotIndex] = cardId;
-
-      // Remove DOM card from pool or old box
-      const cardElem = document.querySelector(`.card[data-id="${cardId}"]`);
-      if (cardElem) cardElem.remove();
-
-      // Render Card inside Drop Box
-      const box = document.querySelector(`.drop-box[data-index="${slotIndex}"]`);
-      box.innerHTML = `<span class="drop-box-number">${slotIndex + 1}</span>`;
-      const newCardElem = createCardElement(cardObj);
-      box.appendChild(newCardElem);
-
-      // Check validation if all 3 slots filled
-      checkSortingResult();
-    }
-
-    // Check Sorting Correctness
-    function checkSortingResult() {
-      if (placedCards.includes(null)) return; // Not all slots filled yet
-
-      const curLvl = levels[currentLevelIndex];
-      let isCorrect = true;
-
-      placedCards.forEach((cardId, index) => {
-        const cardObj = curLvl.cards.find(c => c.id === cardId);
-        if (cardObj.correctOrder !== index) {
-          isCorrect = false;
-        }
-      });
-
-      if (isCorrect) {
-        // Success
-        playSound('success');
-        curLvl.completed = true;
-        saveLevels();
-        renderTabs();
-        
-        // Trigger Confetti
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 }
-        });
-
-        showModal('👍', '做得好！', '你成功依正確順序排列了所有圖咭！');
-      } else {
-        // Error Flash
-        playSound('error');
-        document.querySelectorAll('.drop-box .card').forEach(c => {
-          c.classList.add('wrong-flash');
-          setTimeout(() => c.classList.remove('wrong-flash'), 1600);
-        });
-      }
-    }
-
-    // Hint: Move first card to Box 1
-    function hintFirstCard() {
-      const curLvl = levels[currentLevelIndex];
-      const firstCardObj = curLvl.cards.find(c => c.correctOrder === 0);
-      if (firstCardObj) {
-        moveCardToSlot(firstCardObj.id, 0);
-      }
-    }
-
-    // Reset Level
-    function resetCurrentLevel() {
-      loadCurrentLevel();
-    }
-
-    // Cantonese Speech Synthesis (TTS)
-    function speakText(e, text) {
-      if (e) e.stopPropagation();
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel(); // Stop active speech
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'zh-HK'; // Cantonese
-        utterance.rate = 0.85; // Slightly slower for kids
-        window.speechSynthesis.speak(utterance);
-      } else {
-        alert('你的瀏覽器不支援語音朗讀功能');
-      }
-    }
-
-    // Cantonese Speech Recognition (STT) & 比對
-    function startSpeechMatch(e, targetText) {
-      if (e) e.stopPropagation();
-      const btn = e.currentTarget;
-
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        alert('你的瀏覽器不支援語音辨識功能，請使用 Chrome 瀏覽器。');
-        return;
-      }
-
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'zh-HK';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-
-      btn.classList.add('recording');
-
-      recognition.start();
-
-      recognition.onresult = (event) => {
-        btn.classList.remove('recording');
-        const transcript = event.results[0][0].transcript.trim();
-        
-        // Normalize strings for comparison
-        const cleanTarget = targetText.replace(/[^一-龥]/g, '');
-        const cleanTranscript = transcript.replace(/[^一-龥]/g, '');
-
-        if (cleanTranscript.includes(cleanTarget) || cleanTarget.includes(cleanTranscript)) {
-          playSound('success');
-          confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-          showModal('👍', '做得好！發音非常準確！', `你讀出：「${transcript}」<br>完全符合標準！`);
-        } else {
-          playSound('error');
-          showModal('💪', '加油！再試一次', `你剛才讀出：「${transcript}」<br>提示目標是：「${targetText}」`);
-        }
-      };
-
-      recognition.onerror = () => {
-        btn.classList.remove('recording');
-        alert('語音錄音失敗，請確保已開啟麥克風權限。');
-      };
-
-      recognition.onend = () => {
-        btn.classList.remove('recording');
-      };
-    }
-
-    // Show Modal
-    function showModal(icon, title, desc) {
-      document.getElementById('modalIcon').innerText = icon;
-      document.getElementById('modalTitle').innerText = title;
-      document.getElementById('modalDesc').innerHTML = desc;
-      document.getElementById('modalOverlay').classList.add('show');
-    }
-
-    function closeModal() {
-      document.getElementById('modalOverlay').classList.remove('show');
-    }
-
-    // Teacher Edit Mode Functions
-    function toggleEditMode() {
-      isEditMode = !isEditMode;
-      const panel = document.getElementById('editPanel');
-      const btn = document.getElementById('toggleEditBtn');
-
-      if (isEditMode) {
-        panel.classList.add('show');
-        btn.classList.add('active-edit');
-        btn.innerHTML = '⚙️ 退出編輯模式';
-        updateEditPanelValues();
-      } else {
-        panel.classList.remove('show');
-        btn.classList.remove('active-edit');
-        btn.innerHTML = '⚙️ 老師編輯模式';
-      }
-    }
-
-    function updateEditPanelValues() {
-      const curLvl = levels[currentLevelIndex];
-      document.getElementById('editLevelTitle').value = curLvl.title;
-
-      curLvl.cards.forEach((card, idx) => {
-        document.getElementById(`editImgPrev${idx}`).src = card.img;
-        document.getElementById(`editText${idx}`).value = card.text;
-      });
-    }
-
-    function saveLevelTitle() {
-      const newTitle = document.getElementById('editLevelTitle').value.trim();
-      if (newTitle) {
-        levels[currentLevelIndex].title = newTitle;
-        saveLevels();
-        renderTabs();
-        alert('關卡資料已成功儲存！');
-      }
-    }
-
-    function handleImageUpload(e, cardIndex) {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          const base64Img = evt.target.result;
-          levels[currentLevelIndex].cards[cardIndex].img = base64Img;
-          document.getElementById(`editImgPrev${cardIndex}`).src = base64Img;
-          saveLevels();
-          loadCurrentLevel();
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-
-    function updateCardText(cardIndex, newText) {
-      levels[currentLevelIndex].cards[cardIndex].text = newText;
-      saveLevels();
-      loadCurrentLevel();
-    }
-
-    function addNewTab() {
-      const newId = 'level_' + Date.now();
-      const newLevel = {
-        id: newId,
-        title: '新關卡主題',
-        completed: false,
-        cards: [
-          { id: newId + '_1', correctOrder: 0, text: '第一步', img: createPlaceholderSVG('第一步', '#0284c7') },
-          { id: newId + '_2', correctOrder: 1, text: '第二步', img: createPlaceholderSVG('第二步', '#0369a1') },
-          { id: newId + '_3', correctOrder: 2, text: '第三步', img: createPlaceholderSVG('第三步', '#075985') }
-        ]
-      };
-      levels.push(newLevel);
-      saveLevels();
-      currentLevelIndex = levels.length - 1;
-      renderTabs();
-      loadCurrentLevel();
-      updateEditPanelValues();
-    }
-
-    function deleteCurrentTab() {
-      if (levels.length <= 1) {
-        alert('必須保留至少一個關卡！');
-        return;
-      }
-      if (confirm('確定要刪除目前關卡嗎？')) {
-        levels.splice(currentLevelIndex, 1);
-        currentLevelIndex = Math.max(0, currentLevelIndex - 1);
-        saveLevels();
-        renderTabs();
-        loadCurrentLevel();
-        updateEditPanelValues();
-      }
-    }
-
-    // Start App
-    initApp();
-  </script>
-</body>
-</html>
+    /* Card Item (圖咭) - Full width in pool area */
+    .card-item {
+      width: 100%;
